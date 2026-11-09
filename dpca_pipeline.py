@@ -18,7 +18,7 @@ from sklearn.metrics import silhouette_score
 from datetime import datetime
 import sys
 
-
+# Loggging setup: how the pipeline records itself 
 class Tee:
     def __init__(self, filename):
         self.terminal = sys.stdout
@@ -39,7 +39,7 @@ TRAJECTORY = "_trajectory.xtc"  # MD trajectory file
 CONDITION = ""               # e.g. "AbANT_Apigenin"; used for output naming
 N_PCS = 10                    # Number of principal components to retain
 TEMP_K = 300.0                # Temperature used for FEL calculations
-K_RANGE = range(1, 9)         # Candidate values for K in silhouette analysis
+K_RANGE = range(1, 9)         # Range of cluster values for K in silhouette analysis
 
 
 # Redirect stdout to a log file so all analysis output is recorded
@@ -51,11 +51,11 @@ print(f"  Run date/time : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 print("=" * 60)
 
 print("\n[SECTION 1] Loading trajectory")
-u = mda.Universe(TOPOLOGY, TRAJECTORY)
+u = mda.Universe(TOPOLOGY, TRAJECTORY) #Creates the Universal object u (complete simulation record)
 
-n_frames = len(u.trajectory)
-n_atoms = u.atoms.n_atoms
-n_residues_total = u.residues.n_residues
+n_frames = len(u.trajectory)  # Counts number frames loaded 
+n_atoms = u.atoms.n_atoms     #Total atom count in the system (protein+ligand+solvent+ions)
+n_residues_total = u.residues.n_residues  # Total residue count
 
 print(f"  Topology      : {TOPOLOGY}")
 print(f"  Trajectory    : {TRAJECTORY}")
@@ -64,10 +64,10 @@ print(f"  Total atoms   : {n_atoms}")
 print(f"  Total residues: {n_residues_total}")
 
 print("\n[SECTION 2] Extracting phi/psi dihedral angles")
-protein = u.select_atoms("protein")
-rama = Ramachandran(protein).run()
+protein = u.select_atoms("protein") #isolate protein atoms only
+rama = Ramachandran(protein).run() #Measures phi/psi for every residue 
 
-angles = rama.results.angles
+angles = rama.results.angles 
 n_frames, n_residues, _ = angles.shape
 angles_flat = angles.reshape(n_frames, -1)
 
@@ -117,12 +117,12 @@ print(f"  Sin/cos features added : {len(sincos_cols)} columns")
 print(f"  Saved: {CONDITION}_sincos_features.csv")
 
 print("\n[SECTION 4] Standardising features and running PCA")
-X = df_angles[sincos_cols].values
+X = df_angles[sincos_cols].values  # shape: (n_frames, 4*n_rama_res)
 scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+X_scaled = scaler.fit_transform(X) # zero mean, unit variance
 
 pca = PCA(n_components=N_PCS, random_state=42, svd_solver="full")
-X_pca = pca.fit_transform(X_scaled)
+X_pca = pca.fit_transform(X_scaled) # shape: (n_frames, N_PCS)
 
 pc_cols = [f"PC{i+1}" for i in range(N_PCS)]
 for i, col in enumerate(pc_cols):
@@ -224,7 +224,7 @@ cluster_df = pd.DataFrame({
     "PC1": X_cluster[:, 0],
     "PC2": X_cluster[:, 1],
     "cluster": labels_final,
-})
+}) # PC1 + PC2 only
 
 # Guard against silent label/frame misalignment that would otherwise produce
 # incorrect downstream cluster assignments.
@@ -253,11 +253,14 @@ pc1 = cluster_df["PC1"].values
 pc2 = cluster_df["PC2"].values
 
 hist, xedges, yedges = np.histogram2d(pc1, pc2, bins=100, density=True)
+# Replace zeros to avoid log(0)
 hist[hist == 0] = np.nan
 
+# ΔG = −kBT·ln(P/Pmax)
 with np.errstate(invalid="ignore"):
     delta_G = -kB * TEMP_K * np.log(hist / np.nanmax(hist))
 
+# Build FEL DataFrame, one row per grid cell
 x_centres = 0.5 * (xedges[:-1] + xedges[1:])
 y_centres = 0.5 * (yedges[:-1] + yedges[1:])
 xx, yy = np.meshgrid(x_centres, y_centres, indexing="ij")
@@ -266,7 +269,7 @@ fel_df = pd.DataFrame({
     "PC1": xx.ravel(),
     "PC2": yy.ravel(),
     "delta_G": delta_G.ravel(),
-}).dropna()
+}).dropna() # drop zero-probability bins
 
 fel_df.to_csv(f"{CONDITION}_FEL_dPCA.csv", index=False)
 
