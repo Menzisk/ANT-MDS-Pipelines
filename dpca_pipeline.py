@@ -117,12 +117,13 @@ print(f"  Sin/cos features added : {len(sincos_cols)} columns")
 print(f"  Saved: {CONDITION}_sincos_features.csv")
 
 print("\n[SECTION 4] Standardising features and running PCA")
+# Step1: Standardisation
 X = df_angles[sincos_cols].values  # shape: (n_frames, 4*n_rama_res)
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X) # zero mean, unit variance
-
+# Step2: PCA
 pca = PCA(n_components=N_PCS, random_state=42, svd_solver="full")
-X_pca = pca.fit_transform(X_scaled) # shape: (n_frames, N_PCS)
+X_pca = pca.fit_transform(X_scaled) # finds the 10 directions of maximum variance (n_frames × 10) matrix of PC scores.
 
 pc_cols = [f"PC{i+1}" for i in range(N_PCS)]
 for i, col in enumerate(pc_cols):
@@ -193,7 +194,7 @@ for k in K_RANGE:
     valid_k.append(k)
     print(f"  k={k}: average silhouette score = {avg_score:.4f}")
 
-BEST_K = valid_k[np.argmax(silhouette_avgs)]
+BEST_K = valid_k[np.argmax(silhouette_avgs)] #Finds the index of the highest average silhouette score;
 print(f"\n  Best K: {BEST_K}")
 
 sil_df = pd.DataFrame({
