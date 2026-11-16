@@ -1,5 +1,23 @@
 #  DCCM Pipeline "Name of System"
 #  Author : Menzi Sikakane
+"""
+Compute and plot the Dynamical Cross-Correlation Matrix (DCCM) for one MD
+system, using C-alpha displacements about the mean structure.
+C_ij = <dr_i . dr_j> / sqrt(<dr_i^2> * <dr_j^2>)
+where dr_i is the displacement of residue i from its mean position and
+<...> is the average over all frames. C_ij ranges from -1 (anti-correlated
+motion) to +1 (fully correlated motion).
+
+Inputs
+------
+TOPOLOGY    : topology file (PDB) matching the atoms in the trajectory
+TRAJECTORY  : XTC trajectory (from trj2xtc.py)
+
+Outputs (written to OUTPUT_DIR)
+-------------------------------
+<SYSTEM_LABEL>_DCCM.png : heatmap of the correlation matrix
+<SYSTEM_LABEL>_DCCM.csv : matrix indexed by residue number, for re-plotting
+"""
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -30,7 +48,7 @@ print(f'         Frames loaded : {u.trajectory.n_frames}')
 ag = u.select_atoms(SELECTION)
 n_atoms = ag.n_atoms
 resids = ag.resids
-resnames = ag.resnames # not used below, keeping it for labelling later
+resnames = ag.resnames #  real residue numbers, used for axis labels and CSV indexing
 
 print(f"Selection   : '{SELECTION}'")
 print(f'Residues    : {n_atoms}  (resid {resids[0]}–{resids[-1]})')
@@ -44,7 +62,7 @@ print(f'Alignment complete.')
 
 print(f'\n[STEP 3] Extracting Cα coordinates from {u.trajectory.n_frames} frames')
 n_frames = u.trajectory.n_frames
-coords = np.zeros((n_frames, n_atoms, 3), dtype=np.float32) # float32 to keep memory down on long runs
+coords = np.zeros((n_frames, n_atoms, 3), dtype=np.float32) # float32 to keep memory down on long runs(trajectories)
 for i, ts in enumerate(u.trajectory):
     coords[i] = ag.positions.copy()
 print(f'coords array shape: {coords.shape}')
@@ -52,21 +70,23 @@ print(f' = ({n_frames} frames) × ({n_atoms} atoms) × (3 xyz)')
 
 print(f'\n[STEP 4] Computing DCCM')
 # C_ij = <dr_i . dr_j> / sqrt(<dr_i^2> * <dr_j^2>)
-mean_pos = coords.mean(axis=0) # average structure
+# <...> = average over frames; dr = displacement from the mean structure
+mean_pos = coords.mean(axis=0) # average structure, shape (n_atoms, 3)
 print(f' Mean position array shape: {mean_pos.shape}')
 
-delta = coords - mean_pos # how far each CA sits from its average, per frame
+delta = coords - mean_pos # how far each CA atom sits from its average (mean), per frame
 print(f'Displacement array shape : {delta.shape}')
-# t = frame, i/j = residues, a = xyz. dot product over xyz, averaged over frames
+# Einsum indices: t = frame, i/j = residues, a = xyz 
+# dot product over xyz, averaged over frames -> <dr_i . dr_j>
 numerator = np.einsum('tia,tja->ij', delta, delta) / n_frames
 print(f'Numerator matrix shape   : {numerator.shape}')
-# same thing but i with itself, gives the mean squared fluctuation per residue
+# Same product of each residue with itself: mean squared fluctuation <dr_i^2>
 variance_i = np.einsum('tia,tia->i', delta, delta) / n_frames
 denominator = np.sqrt(np.outer(variance_i, variance_i))
 print(f'Denominator matrix shape : {denominator.shape}')
 
-dccm = numerator / (denominator + 1e-12) # tiny offset so a frozen residue doesn't give nan
-np.fill_diagonal(dccm, 1.0) # self-correlation is 1, just cleaning up rounding error
+dccm = numerator / (denominator + 1e-12) # small offset prevents division by zero (NaN) for a residue with no motion
+np.fill_diagonal(dccm, 1.0) # self-correlation is 1, removes rounding error
 print(f'\n   DCCM computed.')
 print(f' Shape : {dccm.shape}  ({n_atoms} × {n_atoms})')
 print(f' Min   : {dccm.min():.4f}')
@@ -75,7 +95,8 @@ print(f' Mean  : {dccm.mean():.4f}')
 
 print(f'\n[STEP 5] Plotting DCCM heatmap')
 fig, ax = plt.subplots(figsize=(8, 7))
-# colour scale pinned to -1..1 with 0 in the middle so systems can be compared side by side
+# Colour scale fixed to -1..1 and centred on 0 so that different systems
+# can be compared side by side.
 norm = mcolors.TwoSlopeNorm(vmin=-1.0, vcenter=0.0, vmax=1.0)
 im = ax.imshow(dccm, cmap=CMAP, norm=norm, origin='lower', aspect='equal', interpolation='nearest')
 cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
