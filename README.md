@@ -5,7 +5,9 @@
 ### Trajectory processing and analysis pipelines for the ANT(3″)-Ia computational biology study
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)
+![Field](https://img.shields.io/badge/Field-Computational%20Biology-orange?style=flat-square)
 ![Domain](https://img.shields.io/badge/Domain-Molecular%20Dynamics-6A5ACD?style=flat-square)
+![Target](https://img.shields.io/badge/Target-ANT(3%E2%80%B3)--Ia-2E8B57?style=flat-square)
 
 <br>
 
@@ -41,7 +43,7 @@ ANT-MDS
 
 | Repository | Description | Visibility |
 |---|---|---|
-| 🔧 **ANT-MDS-Pipelines** | Core processing and analysis pipelines (this repo) | — |
+| 🔧 **ANT-MDS-Pipelines** | Core processing and analysis pipelines (this repo) | Public |
 | 📊 [**ANT-MDS-Analysis**](https://github.com/Menzisk/ANT-MDS-Analysis) | Downstream analysis scripts and results | Public |
 | 🗄️ [**ANT-MDS-Database**](https://github.com/Menzisk/ANT-MDS-Database) | Trajectory data | Public |
 
