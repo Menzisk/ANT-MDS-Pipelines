@@ -64,8 +64,7 @@ flowchart LR
 
 ```bash
 git clone https://github.com/Menzisk/ANT-MDS-Pipelines.git
-cd ANT-MDS-Pipelines
-pip install -r requirements.txt
+
 ```
 
 > Requires **Python 3.10+**.
