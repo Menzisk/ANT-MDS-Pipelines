@@ -49,16 +49,24 @@ ANT-MDS
 
 ## 🔄 Workflow
 
+Every analysis starts with trajectory conversion. From there the workflow splits into two independent branches: **dPCA → FEL**, and **DCCM** on its own.
+
 ```mermaid
-flowchart LR
-    A[🗄️ Raw trajectories<br/>ANT-MDS-Database] --> B[🔁 Format conversion]
-    B --> C[📐 dPCA]
-    B --> D[🔗 DCCM]
-    C --> E[🏔️ FEL]
-    C --> F[📊 ANT-MDS-Analysis]
-    D --> F
+flowchart TD
+    A[🗄️ Raw trajectories<br/>ANT-MDS-Database] --> B["1️⃣ trj2xtc.py<br/>🔁Trajectory conversion"]
+    B --> C["2️⃣ dpca_pipeline.py<br/>📐Dihedral PCA"]
+    C --> D["3️⃣ fel_pipeline.py<br/>🏔️ Free energy landscape"]
+    B --> E["dccm_pipeline.py<br/>🔗Cross-correlation matrix"]
+    D --> F[📊 ANT-MDS-Analysis]
     E --> F
 ```
+
+| Step | Script | Input | Notes |
+|---|---|---|---|
+| 1 | [`trj2xtc.py`](https://github.com/Menzisk/ANT-MDS-Pipelines/blob/main/trj2xtc.py) | Raw trajectories | Required first step for all analyses |
+| 2 | [`dpca_pipeline.py`](https://github.com/Menzisk/ANT-MDS-Pipelines/blob/main/dpca_pipeline.py) | Converted trajectory | Feeds step 3 |
+| 3 | [`fel_pipeline.py`](https://github.com/Menzisk/ANT-MDS-Pipelines/blob/main/fel_pipeline.py) | dPCA output | Runs after dPCA |
+| — | [`dccm_pipeline.py`](https://github.com/Menzisk/ANT-MDS-Pipelines/blob/main/dccm_pipeline.py) | Converted trajectory | Independent of steps 2 and 3; runs straight after step 1 |
 
 ## Getting Started
 
@@ -79,6 +87,7 @@ Manuscript in preparation. If you use this work, please cite:
 
 **Menzi Sikakane**
 [![GitHub](https://img.shields.io/badge/GitHub-Menzisk-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/Menzisk)
+[![ORCID](https://img.shields.io/badge/ORCID-0009--0005--2472--6548-A6CE39?style=flat-square&logo=orcid&logoColor=white)](https://orcid.org/0009-0005-2472-6548)
 
 ---
 
